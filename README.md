@@ -18,17 +18,16 @@ Photo Organizer is a Python script that sorts photos from a source directory int
 
 ### Installation
 
-Clone the repository and navigate to the project directory:
+Install the package using pip:
 
 ```bash
-git clone https://github.com/yourusername/photo-organizer.git
-cd photo-organizer
+pip install photo-organizer
 ```
 
 ### Running the Script
 
 ```bash
-python photo_organizer.py SOURCE_DIRECTORY TARGET_DIRECTORY [OPTIONS]
+photo_organizer SOURCE_DIRECTORY TARGET_DIRECTORY [OPTIONS]
 ```
 
 ### Arguments
@@ -48,23 +47,22 @@ Options
 
 Move all files from source to target, organizing by year and month:
 ```bash
-Copy code
-python photo_organizer.py /path/to/source /path/to/target
+photo_organizer /path/to/source /path/to/target
 ```
 
 Move all files recursively and organize by year/month/day:
 ```bash
-python photo_organizer.py /path/to/source /path/to/target -r -d
+photo_organizer /path/to/source /path/to/target -r -d
 ```
 
 Copy only .jpg and .png files:
 ```bash
-python photo_organizer.py /path/to/source /path/to/target -e .jpg .png -c
+photo_organizer /path/to/source /path/to/target -e .jpg .png -c
 ```
 
 Enable verbose logging:
 ```bash
-python photo_organizer.py /path/to/source /path/to/target -v
+photo_organizer /path/to/source /path/to/target -v
 ```
 
 ## Logging

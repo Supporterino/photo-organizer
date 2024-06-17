@@ -1,5 +1,6 @@
 # Photo Organizer
-[![Tests](https://github.com/Supporterino/photo-organizer/actions/workflows/python-package.yml/badge.svg)](https://github.com/Supporterino/photo-organizer/actions/workflows/python-package.yml)
+[![Tests](https://github.com/Supporterino/photo-organizer/actions/workflows/python-package.yml/badge.svg)](https://github.com/Supporterino/photo-organizer/actions/workflows/python-package.yml)[![Upload Release](https://github.com/Supporterino/photo-organizer/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Supporterino/photo-organizer/actions/workflows/python-publish.yml)
+
 Photo Organizer is a Python script that sorts photos from a source directory into a target directory based on their creation date. The script can organize photos into year, month, and optionally day subfolders. It also supports copying or moving files, recursive directory traversal, and filtering by file extensions.
 
 ## Features

@@ -3,6 +3,7 @@
 import os
 import pytest
 import tempfile
+import datetime
 from photo_organizer.main import list_files, get_creation_date, ensure_directory_exists
 
 def test_list_files_non_recursive():

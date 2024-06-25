@@ -10,6 +10,7 @@ Photo Organizer is a Python script that sorts photos from a source directory int
 * Recursively traverse directories
 * Filter files by specified extensions
 * Verbose logging for detailed information
+* Flexible folder structure with optional top-level year-month folders.
 
 ## Usage
 
@@ -28,7 +29,7 @@ pip install photo-organizer
 ### Running the Script
 
 ```bash
-photo_organizer SOURCE_DIRECTORY TARGET_DIRECTORY [OPTIONS]
+photo-organizer [-h] [-r] [-d] [-e [ENDINGS [ENDINGS ...]]] [-v] [-c] [--no-year] source target
 ```
 
 ### Arguments
@@ -43,6 +44,7 @@ Options
 * `-e`, `--endings`: Specify file endings/extensions to copy (e.g., .jpg .png). If not specified, all files are included
 * `-v`, `--verbose`: Enable verbose logging
 * `-c`, `--copy`: Copy files instead of moving them
+* `--no-year`: Do not place month folders inside a year folder; place them top-level with the name format YEAR-MONTH
 
 ### Examples
 
@@ -65,6 +67,25 @@ Enable verbose logging:
 ```bash
 photo_organizer /path/to/source /path/to/target -v
 ```
+
+Move photos to top-level year-month folders without a year parent folder:
+```bash
+photo-organizer --no-year /path/to/source /path/to/target
+```
+
+Combine options to copy .jpg and .png files recursively into daily folders with verbose logging:
+```bash
+photo-organizer -r -d -e .jpg .png -v -c /path/to/source /path/to/target
+```
+
+## Dwevelopment
+
+To contribute to this project, follow these steps:
+
+1. Clone the repository.
+2. Install dependencies.
+3. Make your changes and add tests.
+4. Submit a pull request.
 
 ## Logging
 

@@ -5,6 +5,7 @@ import os
 import shutil
 import datetime
 import logging
+import filecmp
 
 
 def list_files(source, recursive=False, file_endings=None):
@@ -79,8 +80,26 @@ def ensure_directory_exists(folder_path):
         logging.debug(f"Directory already exists: {folder_path}")
 
 
-def main():
-    # Set up the argument parser
+def configure_logging(verbose):
+    """
+    Configure logging settings.
+
+    Parameters:
+    verbose (bool): If True, enable verbose logging.
+    """
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+
+
+def parse_arguments():
+    """
+    Parse command line arguments.
+
+    Returns:
+    Namespace: Parsed command line arguments.
+    """
     parser = argparse.ArgumentParser(
         description="Sort photos from source to target directory."
     )
@@ -115,29 +134,17 @@ def main():
         help="Do not place month folders inside a year folder",
     )
 
-    # Parse the arguments
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    # Configure logging
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-    )
 
-    logging.info("Starting file sorting process")
+def organize_files(args, files):
+    """
+    Organize files by moving or copying them to the target directory.
 
-    # Ensure the source directory exists
-    if not os.path.exists(args.source):
-        logging.error(f"Source directory '{args.source}' does not exist.")
-        return
-
-    # Ensure the target directory exists
-    ensure_directory_exists(args.target)
-
-    # List all files in the source directory
-    files = list_files(args.source, args.recursive, args.endings)
-
-    # Move or copy files to the target directory organized by year/month (and optionally day)
+    Parameters:
+    args (Namespace): Parsed command line arguments.
+    files (list): List of file paths to organize.
+    """
     for file_path in files:
         year, month, day = get_creation_date(file_path)
         if args.no_year:
@@ -158,11 +165,51 @@ def main():
         ensure_directory_exists(target_folder)
         target_path = os.path.join(target_folder, os.path.basename(file_path))
 
-        if args.copy:
-            # Copy the file
-            shutil.copy2(file_path, target_path)
-            logging.info(f"Copied '{file_path}' to '{target_path}'")
-        else:
-            # Move the file
-            shutil.move(file_path, target_path)
-            logging.info(f"Moved '{file_path}' to '{target_path}'")
+        if os.path.exists(target_path):
+            if filecmp.cmp(file_path, target_path, shallow=False):
+                logging.warning(
+                    f"File '{target_path}' already exists and is identical. Skipping."
+                )
+                continue
+            else:
+                logging.error(
+                    f"File '{target_path}' already exists and is different. Aborting."
+                )
+                return
+
+        try:
+            if args.copy:
+                shutil.copy2(file_path, target_path)
+                logging.info(f"Copied '{file_path}' to '{target_path}'")
+            else:
+                shutil.move(file_path, target_path)
+                logging.info(f"Moved '{file_path}' to '{target_path}'")
+        except Exception as e:
+            logging.error(
+                f"Failed to {'copy' if args.copy else 'move'} '{file_path}' to '{target_path}': {e}"
+            )
+            return
+
+
+def main():
+    # Parse the arguments
+    args = parse_arguments()
+
+    # Configure logging
+    configure_logging(args.verbose)
+
+    logging.info("Starting file sorting process")
+
+    # Ensure the source directory exists
+    if not os.path.exists(args.source):
+        logging.error(f"Source directory '{args.source}' does not exist.")
+        return
+
+    # Ensure the target directory exists
+    ensure_directory_exists(args.target)
+
+    # List all files in the source directory
+    files = list_files(args.source, args.recursive, args.endings)
+
+    # Organize files by moving or copying them to the target directory
+    organize_files(args, files)

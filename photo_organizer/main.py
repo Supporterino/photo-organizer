@@ -109,6 +109,11 @@ def main():
     parser.add_argument(
         "-c", "--copy", action="store_true", help="Copy files instead of moving them"
     )
+    parser.add_argument(
+        "--no-year",
+        action="store_true",
+        help="Do not place month folders inside a year folder",
+    )
 
     # Parse the arguments
     args = parser.parse_args()
@@ -135,12 +140,21 @@ def main():
     # Move or copy files to the target directory organized by year/month (and optionally day)
     for file_path in files:
         year, month, day = get_creation_date(file_path)
-        if args.daily:
-            target_folder = os.path.join(
-                args.target, str(year), f"{month:02d}", f"{day:02d}"
-            )
+        if args.no_year:
+            if args.daily:
+                target_folder = os.path.join(
+                    args.target, f"{year}-{month:02d}", f"{day:02d}"
+                )
+            else:
+                target_folder = os.path.join(args.target, f"{year}-{month:02d}")
         else:
-            target_folder = os.path.join(args.target, str(year), f"{month:02d}")
+            if args.daily:
+                target_folder = os.path.join(
+                    args.target, str(year), f"{month:02d}", f"{day:02d}"
+                )
+            else:
+                target_folder = os.path.join(args.target, str(year), f"{month:02d}")
+
         ensure_directory_exists(target_folder)
         target_path = os.path.join(target_folder, os.path.basename(file_path))
 

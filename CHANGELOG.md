@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2024-06-25
+
+### Changed
+
+- Refactored the `main` function to improve code modularity and readability by extracting logical components into separate functions.
+
+### Added
+
+- Unit tests for core functions using `pytest`.
+
+### Fixed
+
+- Improved logging messages for better debugging and clarity during file operations.
+
 ## [1.1.0] - 2024-06-25
 
 ### Added

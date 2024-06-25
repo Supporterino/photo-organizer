@@ -127,3 +127,75 @@ def test_organize_files_move(
     target_file_path = os.path.join(target_folder, "photo1.jpg")
     assert os.path.exists(target_folder)
     assert mock_move.called
+
+
+@patch("photo_organizer.main.get_creation_date", return_value=(2021, 1, 1))
+@patch("photo_organizer.main.shutil.move")
+def test_organize_files_no_year(
+    mock_move, mock_get_creation_date, setup_source_directory, setup_target_directory
+):
+    source_dir, file_paths = setup_source_directory
+    target_dir = setup_target_directory
+
+    class Args:
+        def __init__(self):
+            self.target = target_dir
+            self.daily = False
+            self.no_year = True
+            self.copy = False
+
+    args = Args()
+    organize_files(args, file_paths)
+
+    target_folder = os.path.join(target_dir, "2021-01")
+    target_file_path = os.path.join(target_folder, "photo1.jpg")
+    assert os.path.exists(target_folder)
+    assert mock_move.called
+
+
+@patch("photo_organizer.main.get_creation_date", return_value=(2021, 1, 1))
+@patch("photo_organizer.main.shutil.move")
+def test_organize_files_daily(
+    mock_move, mock_get_creation_date, setup_source_directory, setup_target_directory
+):
+    source_dir, file_paths = setup_source_directory
+    target_dir = setup_target_directory
+
+    class Args:
+        def __init__(self):
+            self.target = target_dir
+            self.daily = True
+            self.no_year = False
+            self.copy = False
+
+    args = Args()
+    organize_files(args, file_paths)
+
+    target_folder = os.path.join(target_dir, "2021", "01", "01")
+    target_file_path = os.path.join(target_folder, "photo1.jpg")
+    assert os.path.exists(target_folder)
+    assert mock_move.called
+
+
+@patch("photo_organizer.main.get_creation_date", return_value=(2021, 1, 1))
+@patch("photo_organizer.main.shutil.move")
+def test_organize_files_no_year_daily(
+    mock_move, mock_get_creation_date, setup_source_directory, setup_target_directory
+):
+    source_dir, file_paths = setup_source_directory
+    target_dir = setup_target_directory
+
+    class Args:
+        def __init__(self):
+            self.target = target_dir
+            self.daily = True
+            self.no_year = True
+            self.copy = False
+
+    args = Args()
+    organize_files(args, file_paths)
+
+    target_folder = os.path.join(target_dir, "2021-01", "01")
+    target_file_path = os.path.join(target_folder, "photo1.jpg")
+    assert os.path.exists(target_folder)
+    assert mock_move.called

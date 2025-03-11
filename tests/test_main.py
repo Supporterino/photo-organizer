@@ -1,7 +1,6 @@
 import pytest
 import os
 import tempfile
-import shutil
 from datetime import datetime
 from unittest.mock import patch
 from photo_organizer.main import (
@@ -100,7 +99,6 @@ def test_organize_files_copy(
     organize_files(args, file_paths)
 
     target_folder = os.path.join(target_dir, "2021", "01")
-    target_file_path = os.path.join(target_folder, "photo1.jpg")
     assert os.path.exists(target_folder)
     assert mock_copy.called
 
@@ -124,7 +122,6 @@ def test_organize_files_move(
     organize_files(args, file_paths)
 
     target_folder = os.path.join(target_dir, "2021", "01")
-    target_file_path = os.path.join(target_folder, "photo1.jpg")
     assert os.path.exists(target_folder)
     assert mock_move.called
 
@@ -148,7 +145,6 @@ def test_organize_files_no_year(
     organize_files(args, file_paths)
 
     target_folder = os.path.join(target_dir, "2021-01")
-    target_file_path = os.path.join(target_folder, "photo1.jpg")
     assert os.path.exists(target_folder)
     assert mock_move.called
 
@@ -172,7 +168,6 @@ def test_organize_files_daily(
     organize_files(args, file_paths)
 
     target_folder = os.path.join(target_dir, "2021", "01", "01")
-    target_file_path = os.path.join(target_folder, "photo1.jpg")
     assert os.path.exists(target_folder)
     assert mock_move.called
 
@@ -196,6 +191,5 @@ def test_organize_files_no_year_daily(
     organize_files(args, file_paths)
 
     target_folder = os.path.join(target_dir, "2021-01", "01")
-    target_file_path = os.path.join(target_folder, "photo1.jpg")
     assert os.path.exists(target_folder)
     assert mock_move.called

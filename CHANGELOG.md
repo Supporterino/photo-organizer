@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2024-XX-XX
+
+### Added
+
+- New `--exclude` option to allow filtering out files based on a regex pattern.
+  - Example: `photo-organizer /path/to/source /path/to/target --exclude "^ignore|\.tmp$"`
+  - This helps exclude unwanted files like temporary files or specific naming patterns.
+- Updated documentation to reflect the new feature.
+- Added unit tests for the `--exclude` functionality.
+
 ## [1.1.1] - 2024-06-25
 
 ### Changed

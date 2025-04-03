@@ -32,6 +32,49 @@ def setup_target_directory():
     with tempfile.TemporaryDirectory() as target_dir:
         yield target_dir
 
+def create_test_files(base_dir, filenames):
+    """Helper function to create test files in a temporary directory."""
+    for filename in filenames:
+        file_path = os.path.join(base_dir, filename)
+        with open(file_path, "w") as f:
+            f.write("test")
+
+def test_list_files_exclude_regex():
+    """Test that list_files correctly excludes files matching the regex pattern."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        filenames = ["photo1.jpg", "photo2.png", "ignore_me.txt", "exclude_me.doc"]
+        create_test_files(temp_dir, filenames)
+        
+        # Test exclusion of files ending with .txt or containing "exclude"
+        excluded_pattern = r".*\.txt|exclude.*"
+        files = list_files(temp_dir, recursive=False, file_endings=None, exclude_pattern=excluded_pattern)
+        
+        # Expected files: "photo1.jpg", "photo2.png" (since others match the exclude pattern)
+        expected_files = {os.path.join(temp_dir, "photo1.jpg"), os.path.join(temp_dir, "photo2.png")}
+        assert set(files) == expected_files
+
+def test_list_files_no_exclusion():
+    """Test that list_files returns all files when no exclusion pattern is given."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        filenames = ["photo1.jpg", "photo2.png", "document.txt"]
+        create_test_files(temp_dir, filenames)
+        
+        files = list_files(temp_dir, recursive=False, file_endings=None, exclude_pattern=None)
+        
+        expected_files = {os.path.join(temp_dir, f) for f in filenames}
+        assert set(files) == expected_files
+
+def test_list_files_exclude_with_endings():
+    """Test that list_files applies both file endings and exclude regex correctly."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        filenames = ["photo1.jpg", "photo2.png", "ignore.txt", "photo3.jpg"]
+        create_test_files(temp_dir, filenames)
+        
+        # Filter for .jpg files but exclude ones containing 'photo3'
+        files = list_files(temp_dir, recursive=False, file_endings=[".jpg"], exclude_pattern=r".*photo3.*")
+        
+        expected_files = {os.path.join(temp_dir, "photo1.jpg")}
+        assert set(files) == expected_files
 
 def test_list_files_non_recursive(setup_source_directory):
     source_dir, file_paths = setup_source_directory

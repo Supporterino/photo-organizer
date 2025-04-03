@@ -1,7 +1,7 @@
 # Photo Organizer
 [![Tests](https://github.com/Supporterino/photo-organizer/actions/workflows/python-package.yml/badge.svg)](https://github.com/Supporterino/photo-organizer/actions/workflows/python-package.yml)[![Upload Release](https://github.com/Supporterino/photo-organizer/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Supporterino/photo-organizer/actions/workflows/python-publish.yml)[![PyPI version](https://badge.fury.io/py/photo-organizer.svg)](https://badge.fury.io/py/photo-organizer)
 
-Photo Organizer is a Python script that sorts photos from a source directory into a target directory based on their creation date. The script can organize photos into year, month, and optionally day subfolders. It also supports copying or moving files, recursive directory traversal, and filtering by file extensions.
+Photo Organizer is a Python script that sorts photos from a source directory into a target directory based on their creation date. The script can organize photos into year, month, and optionally day subfolders. It also supports copying or moving files, recursive directory traversal, filtering by file extensions, and excluding files using regex patterns.
 
 ## Features
 
@@ -9,6 +9,7 @@ Photo Organizer is a Python script that sorts photos from a source directory int
 * Move or copy files from the source to the target directory
 * Recursively traverse directories
 * Filter files by specified extensions
+* Exclude files from processing using regex patterns
 * Verbose logging for detailed information
 * Flexible folder structure with optional top-level year-month folders.
 
@@ -29,7 +30,7 @@ pip install photo-organizer
 ### Running the Script
 
 ```bash
-photo-organizer [-h] [-r] [-d] [-e [ENDINGS [ENDINGS ...]]] [-v] [-c] [--no-year] source target
+photo-organizer [-h] [-r] [-d] [-e [ENDINGS [ENDINGS ...]]] [-v] [-c] [--no-year] [--exclude EXCLUDE_PATTERN] source target
 ```
 
 ### Arguments
@@ -42,6 +43,7 @@ Options
 * `-r`, `--recursive`: Sort photos recursively from the source directory
 * `-d`, `--daily`: Organize photos into daily folders (year/month/day)
 * `-e`, `--endings`: Specify file endings/extensions to copy (e.g., .jpg .png). If not specified, all files are included
+* `--exclude`: Provide a regex pattern to exclude matching files from being processed
 * `-v`, `--verbose`: Enable verbose logging
 * `-c`, `--copy`: Copy files instead of moving them
 * `--no-year`: Do not place month folders inside a year folder; place them top-level with the name format YEAR-MONTH
@@ -63,6 +65,11 @@ Copy only .jpg and .png files:
 photo_organizer /path/to/source /path/to/target -e .jpg .png -c
 ```
 
+Exclude files matching a specific regex pattern:
+```bash
+photo-organizer /path/to/source /path/to/target --exclude "^ignore|\.tmp$"
+```
+
 Enable verbose logging:
 ```bash
 photo_organizer /path/to/source /path/to/target -v
@@ -78,7 +85,7 @@ Combine options to copy .jpg and .png files recursively into daily folders with 
 photo-organizer -r -d -e .jpg .png -v -c /path/to/source /path/to/target
 ```
 
-## Dwevelopment
+## Development
 
 To contribute to this project, follow these steps:
 

@@ -2,38 +2,41 @@
 
 import argparse
 import os
+import re
 import shutil
 import datetime
 import logging
 import filecmp
 
 
-def list_files(source, recursive=False, file_endings=None):
+def list_files(source, recursive=False, file_endings=None, exclude_pattern=None):
     """
-    List all files in the source directory.
+    List all files in the source directory, optionally filtering by file extension and excluding files by regex.
 
     Parameters:
     source (str): The source directory path.
     recursive (bool): If True, list files recursively. Default is False.
-    file_endings (list): List of file endings/extensions to include. Default is None.
+    file_endings (list): List of file extensions to include (e.g., ['.jpg', '.png']). Default is None.
+    exclude_pattern (str): A regex pattern to exclude matching files. Default is None.
 
     Returns:
-    list: A list of file paths.
+    list: A list of file paths that meet the criteria.
     """
     file_list = []
+    pattern = re.compile(exclude_pattern) if exclude_pattern else None
+    
     if recursive:
         for root, dirs, files in os.walk(source):
             for file in files:
-                if not file_endings or file.lower().endswith(tuple(file_endings)):
+                if (not file_endings or file.lower().endswith(tuple(file_endings))) and (not pattern or not pattern.search(file)):
                     file_list.append(os.path.join(root, file))
     else:
         with os.scandir(source) as entries:
             for entry in entries:
-                if entry.is_file() and (
-                    not file_endings or entry.name.lower().endswith(tuple(file_endings))
-                ):
+                if entry.is_file() and (not file_endings or entry.name.lower().endswith(tuple(file_endings))) and (not pattern or not pattern.search(entry.name)):
                     file_list.append(entry.path)
-    logging.debug(f"Listed {len(file_list)} files from {source}")
+    
+    logging.debug(f"Listed {len(file_list)} files from {source}, excluding pattern: {exclude_pattern}")
     return file_list
 
 
@@ -95,45 +98,24 @@ def configure_logging(verbose):
 
 def parse_arguments():
     """
-    Parse command line arguments.
+    Parse command-line arguments for the photo organizer.
 
     Returns:
-    Namespace: Parsed command line arguments.
+    argparse.Namespace: Parsed command-line arguments.
     """
     parser = argparse.ArgumentParser(
         description="Sort photos from source to target directory."
     )
     parser.add_argument("source", type=str, help="The source directory")
     parser.add_argument("target", type=str, help="The target directory")
-    parser.add_argument(
-        "-r", "--recursive", action="store_true", help="Sort photos recursively"
-    )
-    parser.add_argument(
-        "-d",
-        "--daily",
-        action="store_true",
-        default=False,
-        help="Folder structure with daily folders",
-    )
-    parser.add_argument(
-        "-e",
-        "--endings",
-        type=str,
-        nargs="*",
-        help="File endings/extensions to copy (e.g., .jpg .png)",
-    )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose logging"
-    )
-    parser.add_argument(
-        "-c", "--copy", action="store_true", help="Copy files instead of moving them"
-    )
-    parser.add_argument(
-        "--no-year",
-        action="store_true",
-        help="Do not place month folders inside a year folder",
-    )
-
+    parser.add_argument("-r", "--recursive", action="store_true", help="Sort photos recursively")
+    parser.add_argument("-d", "--daily", action="store_true", default=False, help="Folder structure with daily folders")
+    parser.add_argument("-e", "--endings", type=str, nargs="*", help="File endings/extensions to copy (e.g., .jpg .png)")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument("-c", "--copy", action="store_true", help="Copy files instead of moving them")
+    parser.add_argument("--no-year", action="store_true", help="Do not place month folders inside a year folder")
+    parser.add_argument("--exclude", type=str, help="Regex pattern to exclude files from processing")
+    
     return parser.parse_args()
 
 
@@ -192,24 +174,27 @@ def organize_files(args, files):
 
 
 def main():
+    """
+    Main entry point for the photo organizer script. Parses arguments, configures logging, and processes files.
+    """
     # Parse the arguments
     args = parse_arguments()
-
+    
     # Configure logging
     configure_logging(args.verbose)
-
+    
     logging.info("Starting file sorting process")
-
+    
     # Ensure the source directory exists
     if not os.path.exists(args.source):
         logging.error(f"Source directory '{args.source}' does not exist.")
         return
-
+    
     # Ensure the target directory exists
     ensure_directory_exists(args.target)
-
-    # List all files in the source directory
-    files = list_files(args.source, args.recursive, args.endings)
-
+    
+    # List all files in the source directory, applying the exclusion filter
+    files = list_files(args.source, args.recursive, args.endings, args.exclude)
+    
     # Organize files by moving or copying them to the target directory
     organize_files(args, files)

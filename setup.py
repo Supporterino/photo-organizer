@@ -12,8 +12,7 @@ setup(
         ],
     },
     install_requires=[
-        # List dependencies here, e.g.,
-        # 'numpy',
+        'tqdm'
     ],
     author='Supporterino',
     author_email='lars@roth-kl.de',

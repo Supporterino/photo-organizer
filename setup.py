@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='photo_organizer',
-    version='1.2.0',
+    version='1.3.0',
     packages=find_packages(),
     entry_points={
         'console_scripts': [
@@ -12,8 +12,7 @@ setup(
         ],
     },
     install_requires=[
-        # List dependencies here, e.g.,
-        # 'numpy',
+        'tqdm'
     ],
     author='Supporterino',
     author_email='lars@roth-kl.de',

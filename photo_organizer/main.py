@@ -7,7 +7,8 @@ import shutil
 import datetime
 import logging
 import filecmp
-
+import glob
+from tqdm import tqdm
 
 def list_files(source, recursive=False, file_endings=None, exclude_pattern=None):
     """
@@ -22,20 +23,20 @@ def list_files(source, recursive=False, file_endings=None, exclude_pattern=None)
     Returns:
     list: A list of file paths that meet the criteria.
     """
-    file_list = []
     pattern = re.compile(exclude_pattern) if exclude_pattern else None
+    file_endings = tuple(e.lower() for e in file_endings) if file_endings else None
     
-    if recursive:
-        for root, dirs, files in os.walk(source):
-            for file in files:
-                if (not file_endings or file.lower().endswith(tuple(file_endings))) and (not pattern or not pattern.search(file)):
-                    file_list.append(os.path.join(root, file))
-    else:
-        with os.scandir(source) as entries:
-            for entry in entries:
-                if entry.is_file() and (not file_endings or entry.name.lower().endswith(tuple(file_endings))) and (not pattern or not pattern.search(entry.name)):
-                    file_list.append(entry.path)
-    
+    # Use glob for efficient file listing
+    search_pattern = os.path.join(source, "**" if recursive else "*")
+    all_files = glob.glob(search_pattern, recursive=recursive)
+
+    file_list = [
+        file for file in all_files
+        if os.path.isfile(file)  # Ensure it's a file
+        and (not file_endings or file.lower().endswith(file_endings))  # Filter by extension
+        and (not pattern or not pattern.search(os.path.basename(file)))  # Apply regex exclusion
+    ]
+
     logging.debug(f"Listed {len(file_list)} files from {source}, excluding pattern: {exclude_pattern}")
     return file_list
 
@@ -50,37 +51,30 @@ def get_creation_date(file_path):
     Returns:
     tuple: A tuple containing the year, month, and day.
     """
+    stat = os.stat(file_path)
+
     if os.name == "nt":  # Windows
         creation_time = os.path.getctime(file_path)
-    else:  # macOS or Linux
-        stat = os.stat(file_path)
-        try:
-            creation_time = stat.st_birthtime
-        except AttributeError:
-            # Fallback to the last metadata change time (best approximation)
-            creation_time = stat.st_mtime
+    elif hasattr(stat, "st_birthtime"):  # macOS
+        creation_time = stat.st_birthtime
+    else:  # Linux (fallback to last metadata change time)
+        creation_time = stat.st_mtime
 
-    creation_date = datetime.datetime.fromtimestamp(creation_time)
-    year = creation_date.year
-    month = creation_date.month
-    day = creation_date.day
+    creation_date = datetime.date.fromtimestamp(creation_time)
 
-    logging.debug(f"File {file_path} creation date: {year}-{month:02d}-{day:02d}")
-    return year, month, day
+    logging.debug(f"File {file_path} creation date: {creation_date}")
+    return creation_date.year, creation_date.month, creation_date.day
 
 
 def ensure_directory_exists(folder_path):
     """
-    Check if a given folder path exists, if not, create all missing folders.
+    Ensure the given folder path exists. If not, create all missing directories.
 
     Parameters:
     folder_path (str): The path to the folder.
     """
-    if not os.path.exists(folder_path):
-        os.makedirs(folder_path)
-        logging.info(f"Created missing directories for path: {folder_path}")
-    else:
-        logging.debug(f"Directory already exists: {folder_path}")
+    os.makedirs(folder_path, exist_ok=True)
+    logging.debug(f"Ensured directory exists: {folder_path}")
 
 
 def configure_logging(verbose):
@@ -127,74 +121,84 @@ def organize_files(args, files):
     args (Namespace): Parsed command line arguments.
     files (list): List of file paths to organize.
     """
-    for file_path in files:
-        year, month, day = get_creation_date(file_path)
-        if args.no_year:
-            if args.daily:
-                target_folder = os.path.join(
-                    args.target, f"{year}-{month:02d}", f"{day:02d}"
-                )
-            else:
-                target_folder = os.path.join(args.target, f"{year}-{month:02d}")
-        else:
-            if args.daily:
-                target_folder = os.path.join(
-                    args.target, str(year), f"{month:02d}", f"{day:02d}"
-                )
-            else:
-                target_folder = os.path.join(args.target, str(year), f"{month:02d}")
+    failed_files = []  # Track files that couldn't be processed
 
+    for file_path in tqdm(files, unit='files'):
+        year, month, day = get_creation_date(file_path)
+        
+        # Construct target folder structure
+        folder_parts = [args.target]
+        if args.no_year:
+            folder_parts.append(f"{str(year)}-{month:02d}")
+        else:
+            folder_parts.append(str(year))
+            folder_parts.append(f"{month:02d}")
+        if args.daily:
+            folder_parts.append(f"{day:02d}")
+
+        target_folder = os.path.join(*folder_parts)
         ensure_directory_exists(target_folder)
         target_path = os.path.join(target_folder, os.path.basename(file_path))
 
+        # Check for duplicate file
         if os.path.exists(target_path):
             if filecmp.cmp(file_path, target_path, shallow=False):
-                logging.warning(
-                    f"File '{target_path}' already exists and is identical. Skipping."
-                )
+                logging.warning(f"Skipping '{file_path}': Identical file already exists at '{target_path}'")
                 continue
             else:
-                logging.error(
-                    f"File '{target_path}' already exists and is different. Aborting."
-                )
-                return
+                logging.error(f"File conflict: '{target_path}' already exists but is different.")
+                failed_files.append(file_path)
+                continue
 
+        # Move or copy file
         try:
             if args.copy:
                 shutil.copy2(file_path, target_path)
-                logging.info(f"Copied '{file_path}' to '{target_path}'")
+                logging.info(f"Copied '{file_path}' → '{target_path}'")
             else:
                 shutil.move(file_path, target_path)
-                logging.info(f"Moved '{file_path}' to '{target_path}'")
+                logging.info(f"Moved '{file_path}' → '{target_path}'")
         except Exception as e:
-            logging.error(
-                f"Failed to {'copy' if args.copy else 'move'} '{file_path}' to '{target_path}': {e}"
-            )
-            return
+            logging.error(f"Error moving/copying '{file_path}' → '{target_path}': {e}")
+            failed_files.append(file_path)
 
+    return failed_files  # Return failed files for better handling
 
 def main():
     """
-    Main entry point for the photo organizer script. Parses arguments, configures logging, and processes files.
+    Main entry point for the photo organizer script.
+    Parses arguments, configures logging, and processes files.
     """
-    # Parse the arguments
     args = parse_arguments()
-    
-    # Configure logging
     configure_logging(args.verbose)
+
+    logging.info("Photo Organizer started")
     
-    logging.info("Starting file sorting process")
-    
-    # Ensure the source directory exists
-    if not os.path.exists(args.source):
-        logging.error(f"Source directory '{args.source}' does not exist.")
-        return
-    
-    # Ensure the target directory exists
+    if not os.path.isdir(args.source):
+        logging.error(f"Source directory does not exist: {args.source}")
+        return 1  # Exit with error
+
     ensure_directory_exists(args.target)
-    
-    # List all files in the source directory, applying the exclusion filter
-    files = list_files(args.source, args.recursive, args.endings, args.exclude)
-    
-    # Organize files by moving or copying them to the target directory
-    organize_files(args, files)
+
+    logging.info("Collecting files...")
+    files = list_files(
+        source=args.source,
+        recursive=args.recursive,
+        file_endings=args.endings,
+        exclude_pattern=args.exclude,
+    )
+
+    if not files:
+        logging.warning("No matching files found to organize.")
+        return 0  # Exit normally, nothing to do
+
+    logging.info(f"{len(files)} files found. Starting organization...")
+    failed = organize_files(args, files)
+
+    if failed:
+        logging.warning(f"Organization completed with {len(failed)} failed file(s).")
+        return 1  # Partial failure
+    else:
+        logging.info("All files organized successfully.")
+        return 0
+

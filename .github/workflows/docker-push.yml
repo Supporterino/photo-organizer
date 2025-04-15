@@ -24,4 +24,4 @@ jobs:
           # options related to PUSHing the docker image:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.PAT_TOKEN_FOR_GITHUB }}
+          password: ${{ secrets.GITHUB_TOKEN }}

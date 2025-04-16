@@ -10,7 +10,7 @@ RUN python -m build
 # actual image
 FROM python:3.13-slim
 
-LABEL org.opencontainers.image.source=https://github.com/f18m/photo-organizer
+LABEL org.opencontainers.image.source=https://github.com/Supporterino/photo-organizer
 
 # install the wheel
 WORKDIR /app

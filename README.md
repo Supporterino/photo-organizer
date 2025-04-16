@@ -27,6 +27,16 @@ Install the package using pip:
 pip install photo-organizer
 ```
 
+In alternative you can use it with Docker:
+
+```bash
+docker run -ti \
+    -v <your-photo-source-directory>:/source \
+    -v <your-photo-target-directory>:/target \
+    ghcr.io/Supporterino/photo-organizer:latest /source /target
+```
+
+
 ### Running the Script
 
 ```bash

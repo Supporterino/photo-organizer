@@ -9,35 +9,64 @@ import logging
 import filecmp
 import glob
 from tqdm import tqdm
+import fnmatch
 
-def list_files(source, recursive=False, file_endings=None, exclude_pattern=None):
+
+def list_files(
+    source,
+    recursive=False,
+    file_endings=None,
+    exclude_pattern=None,
+    exclude_is_regex=False,
+):
     """
-    List all files in the source directory, optionally filtering by file extension and excluding files by regex.
+    List all files in the source directory, optionally filtering by file extension
+    and excluding files using glob or regex patterns.
 
     Parameters:
     source (str): The source directory path.
     recursive (bool): If True, list files recursively. Default is False.
     file_endings (list): List of file extensions to include (e.g., ['.jpg', '.png']). Default is None.
-    exclude_pattern (str): A regex pattern to exclude matching files. Default is None.
+    exclude_pattern (str): A glob or regex pattern to exclude matching files. Default is None.
+    exclude_is_regex (bool): Whether to treat the exclude_pattern as a regular expression.
 
     Returns:
     list: A list of file paths that meet the criteria.
     """
-    pattern = re.compile(exclude_pattern) if exclude_pattern else None
+    pattern = None
+    if exclude_pattern:
+        try:
+            pattern_str = (
+                exclude_pattern
+                if exclude_is_regex
+                else fnmatch.translate(exclude_pattern)
+            )
+            pattern = re.compile(pattern_str)
+            logging.debug(
+                f"Using {'regex' if exclude_is_regex else 'glob'} exclude pattern: '{exclude_pattern}' "
+                f"-> compiled regex: '{pattern.pattern}'"
+            )
+        except re.error as e:
+            logging.error(f"Invalid exclude pattern '{exclude_pattern}': {e}")
+            return []
+
     file_endings = tuple(e.lower() for e in file_endings) if file_endings else None
-    
+
     # Use glob for efficient file listing
     search_pattern = os.path.join(source, "**" if recursive else "*")
     all_files = glob.glob(search_pattern, recursive=recursive)
 
     file_list = [
-        file for file in all_files
-        if os.path.isfile(file)  # Ensure it's a file
-        and (not file_endings or file.lower().endswith(file_endings))  # Filter by extension
-        and (not pattern or not pattern.search(os.path.basename(file)))  # Apply regex exclusion
+        file
+        for file in all_files
+        if os.path.isfile(file)
+        and (not file_endings or file.lower().endswith(file_endings))
+        and (not pattern or not pattern.search(os.path.basename(file)))
     ]
 
-    logging.debug(f"Listed {len(file_list)} files from {source}, excluding pattern: {exclude_pattern}")
+    logging.debug(
+        f"Listed {len(file_list)} files from {source} (recursive={recursive})"
+    )
     return file_list
 
 
@@ -102,14 +131,44 @@ def parse_arguments():
     )
     parser.add_argument("source", type=str, help="The source directory")
     parser.add_argument("target", type=str, help="The target directory")
-    parser.add_argument("-r", "--recursive", action="store_true", help="Sort photos recursively")
-    parser.add_argument("-d", "--daily", action="store_true", default=False, help="Folder structure with daily folders")
-    parser.add_argument("-e", "--endings", type=str, nargs="*", help="File endings/extensions to copy (e.g., .jpg .png)")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
-    parser.add_argument("-c", "--copy", action="store_true", help="Copy files instead of moving them")
-    parser.add_argument("--no-year", action="store_true", help="Do not place month folders inside a year folder")
-    parser.add_argument("--exclude", type=str, help="Regex pattern to exclude files from processing")
-    
+    parser.add_argument(
+        "-r", "--recursive", action="store_true", help="Sort photos recursively"
+    )
+    parser.add_argument(
+        "-d",
+        "--daily",
+        action="store_true",
+        default=False,
+        help="Folder structure with daily folders",
+    )
+    parser.add_argument(
+        "-e",
+        "--endings",
+        type=str,
+        nargs="*",
+        help="File endings/extensions to copy (e.g., .jpg .png)",
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable verbose logging"
+    )
+    parser.add_argument(
+        "-c", "--copy", action="store_true", help="Copy files instead of moving them"
+    )
+    parser.add_argument(
+        "--no-year",
+        action="store_true",
+        help="Do not place month folders inside a year folder",
+    )
+    parser.add_argument(
+        "--exclude",
+        help="Glob or regex pattern to exclude files. Defaults to glob unless --exclude-regex is set.",
+    )
+    parser.add_argument(
+        "--exclude-regex",
+        action="store_true",
+        help="Interpret the --exclude pattern as a regular expression.",
+    )
+
     return parser.parse_args()
 
 
@@ -123,9 +182,9 @@ def organize_files(args, files):
     """
     failed_files = []  # Track files that couldn't be processed
 
-    for file_path in tqdm(files, unit='files'):
+    for file_path in tqdm(files, unit="files"):
         year, month, day = get_creation_date(file_path)
-        
+
         # Construct target folder structure
         folder_parts = [args.target]
         if args.no_year:
@@ -143,10 +202,14 @@ def organize_files(args, files):
         # Check for duplicate file
         if os.path.exists(target_path):
             if filecmp.cmp(file_path, target_path, shallow=False):
-                logging.warning(f"Skipping '{file_path}': Identical file already exists at '{target_path}'")
+                logging.warning(
+                    f"Skipping '{file_path}': Identical file already exists at '{target_path}'"
+                )
                 continue
             else:
-                logging.error(f"File conflict: '{target_path}' already exists but is different.")
+                logging.error(
+                    f"File conflict: '{target_path}' already exists but is different."
+                )
                 failed_files.append(file_path)
                 continue
 
@@ -164,6 +227,7 @@ def organize_files(args, files):
 
     return failed_files  # Return failed files for better handling
 
+
 def main():
     """
     Main entry point for the photo organizer script.
@@ -173,7 +237,7 @@ def main():
     configure_logging(args.verbose)
 
     logging.info("Photo Organizer started")
-    
+
     if not os.path.isdir(args.source):
         logging.error(f"Source directory does not exist: {args.source}")
         return 1  # Exit with error
@@ -186,6 +250,7 @@ def main():
         recursive=args.recursive,
         file_endings=args.endings,
         exclude_pattern=args.exclude,
+        exclude_is_regex=args.exclude_regex,
     )
 
     if not files:
@@ -201,4 +266,3 @@ def main():
     else:
         logging.info("All files organized successfully.")
         return 0
-

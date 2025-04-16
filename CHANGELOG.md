@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-04-16
+
+### Added
+
+- Docker support: You can now build and run the photo organizer in a container using a multi-stage Dockerfile.
+  - Build: `docker build -t photo-organizer .`
+  - Run: `docker run --rm -v $(pwd)/source:/source -v $(pwd)/target:/target photo-organizer /source /target`
+  - This provides a quick and portable way to use the tool without installing Python or dependencies locally.
+- Glob-based `--exclude` patterns now supported by default (e.g., `--exclude '*thrashed*'`).
+- New `--exclude-regex` flag to treat the exclude pattern as a regular expression.
+- Added debug log that shows how the exclude pattern is interpreted and compiled.
+
+### Changed
+
+- `list_files()` now supports both glob and regex filtering using a unified interface.
+- Improved logging for exclusion filters and pattern interpretation.
+
+### Fixed
+
+- Handled `re.PatternError` when users accidentally pass glob patterns to `--exclude`, by defaulting to glob behavior.
+
 ## [1.3.0] - 2025-04-07
 
 ### Added

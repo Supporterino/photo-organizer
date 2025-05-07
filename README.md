@@ -54,7 +54,7 @@ Options
 * `-d`, `--daily`: Organize photos into daily folders (year/month/day)
 * `-e`, `--endings`: Specify file endings/extensions to copy (e.g., .jpg .png). If not specified, all files are included
 * `--exclude`: Provide a regex pattern to exclude matching files from being processed
-* `-v`, `--verbose`: Enable verbose logging
+* `-v`, `--verbose`: Enable verbose logging. -vv means more verbose.
 * `-c`, `--copy`: Copy files instead of moving them
 * `--no-year`: Do not place month folders inside a year folder; place them top-level with the name format YEAR-MONTH
 
@@ -82,7 +82,7 @@ photo-organizer /path/to/source /path/to/target --exclude "^ignore|\.tmp$"
 
 Enable verbose logging:
 ```bash
-photo_organizer /path/to/source /path/to/target -v
+photo_organizer /path/to/source /path/to/target -vv
 ```
 
 Move photos to top-level year-month folders without a year parent folder:
@@ -92,7 +92,7 @@ photo-organizer --no-year /path/to/source /path/to/target
 
 Combine options to copy .jpg and .png files recursively into daily folders with verbose logging:
 ```bash
-photo-organizer -r -d -e .jpg .png -v -c /path/to/source /path/to/target
+photo-organizer -r -d -e .jpg .png -vv -c /path/to/source /path/to/target
 ```
 
 ## Development
@@ -106,7 +106,7 @@ To contribute to this project, follow these steps:
 
 ## Logging
 
-The script uses Python's logging module to provide detailed information about the operations performed. By default, the logging level is set to INFO. Use the `-v` or `--verbose` flag to enable `DEBUG` level logging for more detailed output.
+The script uses Python's logging module to provide detailed information about the operations performed. By default, the logging level is set to INFO. Use the `-v` or `--verbose` flag to enable `INFO` level logging and `-v` or `--verbose --verbose`` for `DEBUG` level logging for more detailed output.
 
 ## Contributing
 

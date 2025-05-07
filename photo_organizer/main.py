@@ -111,7 +111,7 @@ def configure_logging(verbose):
     Configure logging settings.
 
     Parameters:
-    verbose (bool): If True, enable verbose logging.
+    verbose (int): Increase verbosity with count (max of 2).
     """
     if verbose == 0:
         level = logging.WARNING  # default

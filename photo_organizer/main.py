@@ -111,10 +111,20 @@ def configure_logging(verbose):
     Configure logging settings.
 
     Parameters:
-    verbose (bool): If True, enable verbose logging.
+    verbose (int): Increase verbosity with count (max of 2).
     """
+    if verbose == 0:
+        level = logging.WARNING  # default
+    elif verbose == 1:
+        level = logging.INFO
+    elif verbose == 2:
+        level = logging.DEBUG
+    elif verbose > 2:
+        level = logging.DEBUG
+        logging.warning("Verbosity set >2 has no effect.")
+
     logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.INFO,
+        level=level,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
@@ -149,7 +159,11 @@ def parse_arguments():
         help="File endings/extensions to copy (e.g., .jpg .png)",
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose logging"
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Increase verbosity level (use -v for verbose, -vv for more verbose).",
     )
     parser.add_argument(
         "-c", "--copy", action="store_true", help="Copy files instead of moving them"

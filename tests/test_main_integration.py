@@ -24,7 +24,7 @@ def mock_args(base, **overrides):
         recursive = False
         endings = [".jpg", ".png"]
         exclude = None
-        verbose = False
+        verbose = 0
         exclude_regex = False
 
     for key, value in overrides.items():

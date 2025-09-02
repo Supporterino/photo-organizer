@@ -20,6 +20,7 @@ def mock_args(base, **overrides):
         target = base["target"]
         copy = False
         no_year = False
+        no_progress = False
         daily = False
         recursive = False
         endings = [".jpg", ".png"]

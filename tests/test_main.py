@@ -159,6 +159,7 @@ def test_organize_files_copy(
             self.daily = False
             self.no_year = False
             self.copy = True
+            self.no_progress = False
 
     args = Args()
     organize_files(args, file_paths)
@@ -182,6 +183,7 @@ def test_organize_files_move(
             self.daily = False
             self.no_year = False
             self.copy = False
+            self.no_progress = False
 
     args = Args()
     organize_files(args, file_paths)
@@ -205,6 +207,7 @@ def test_organize_files_no_year(
             self.daily = False
             self.no_year = True
             self.copy = False
+            self.no_progress = False
 
     args = Args()
     organize_files(args, file_paths)
@@ -228,6 +231,7 @@ def test_organize_files_daily(
             self.daily = True
             self.no_year = False
             self.copy = False
+            self.no_progress = False
 
     args = Args()
     organize_files(args, file_paths)
@@ -251,6 +255,7 @@ def test_organize_files_no_year_daily(
             self.daily = True
             self.no_year = True
             self.copy = False
+            self.no_progress = False
 
     args = Args()
     organize_files(args, file_paths)

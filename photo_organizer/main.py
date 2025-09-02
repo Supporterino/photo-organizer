@@ -187,6 +187,11 @@ def parse_arguments():
         action="store_true",
         help="Disable progress bar for usage in a fully automated environment.",
     )
+    parser.add_argument(
+        "--delete-duplicates",
+        action="store_true",
+        help="Delete source file if an identical file already exists in the target directory",
+    )
 
     return parser.parse_args()
 
@@ -226,9 +231,19 @@ def organize_files(args, files):
         # Check for duplicate file
         if os.path.exists(target_path):
             if filecmp.cmp(file_path, target_path, shallow=False):
-                logging.warning(
-                    f"Skipping '{file_path}': Identical file already exists at '{target_path}'"
-                )
+                if args.delete_duplicates:
+                    try:
+                        os.remove(file_path)
+                        logging.info(
+                            f"Deleted duplicate '{file_path}' (already exists at '{target_path}')"
+                        )
+                    except Exception as e:
+                        logging.error(f"Error deleting duplicate '{file_path}': {e}")
+                        failed_files.append(file_path)
+                else:
+                    logging.warning(
+                        f"Skipping '{file_path}': Identical file already exists at '{target_path}'"
+                    )
                 continue
             else:
                 logging.error(

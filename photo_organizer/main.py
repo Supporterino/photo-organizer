@@ -182,6 +182,11 @@ def parse_arguments():
         action="store_true",
         help="Interpret the --exclude pattern as a regular expression.",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable progress bar for usage in a fully automated environment.",
+    )
 
     return parser.parse_args()
 
@@ -196,7 +201,12 @@ def organize_files(args, files):
     """
     failed_files = []  # Track files that couldn't be processed
 
-    for file_path in tqdm(files, unit="files"):
+    if args.no_progress:
+        file_iter = files
+    else:
+        file_iter = tqdm(files, unit="files")
+
+    for file_path in file_iter:
         year, month, day = get_creation_date(file_path)
 
         # Construct target folder structure

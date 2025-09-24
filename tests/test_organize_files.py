@@ -33,20 +33,14 @@ def sample_files(temp_dir):
 
 def test_organize_files_move(temp_dir, sample_files):
     """Test moving files into the organized structure."""
-    args = mock.Mock()
-    args.target = os.path.join(temp_dir, "organized")
-    args.copy = False
-    args.no_year = False
-    args.daily = False
-
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)
     ):
-        failed_files = organize_files(args, sample_files)
+        _, failed_files = organize_files(sample_files, os.path.join(temp_dir, "organized"))
 
     # Ensure the files were moved
-    expected_path1 = os.path.join(args.target, "2023", "11", "file1.txt")
-    expected_path2 = os.path.join(args.target, "2023", "11", "file2.txt")
+    expected_path1 = os.path.join(os.path.join(temp_dir, "organized"), "2023", "11", "file1.txt")
+    expected_path2 = os.path.join(os.path.join(temp_dir, "organized"), "2023", "11", "file2.txt")
 
     assert os.path.exists(expected_path1)
     assert os.path.exists(expected_path2)
@@ -57,20 +51,16 @@ def test_organize_files_move(temp_dir, sample_files):
 
 def test_organize_files_copy(temp_dir, sample_files):
     """Test copying files instead of moving."""
-    args = mock.Mock()
-    args.target = os.path.join(temp_dir, "organized")
-    args.copy = True
-    args.no_year = False
-    args.daily = False
+    target_dir = os.path.join(temp_dir, "organized")
 
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)
     ):
-        failed_files = organize_files(args, sample_files)
+        _, failed_files = organize_files(sample_files, target_dir, copy=True)
 
     # Ensure the files were copied
-    expected_path1 = os.path.join(args.target, "2023", "11", "file1.txt")
-    expected_path2 = os.path.join(args.target, "2023", "11", "file2.txt")
+    expected_path1 = os.path.join(target_dir, "2023", "11", "file1.txt")
+    expected_path2 = os.path.join(target_dir, "2023", "11", "file2.txt")
 
     assert os.path.exists(expected_path1)
     assert os.path.exists(expected_path2)
@@ -81,33 +71,25 @@ def test_organize_files_copy(temp_dir, sample_files):
 
 def test_organize_files_conflict_identical(temp_dir, sample_files):
     """Test handling of duplicate identical files."""
-    args = mock.Mock()
-    args.target = os.path.join(temp_dir, "organized")
-    args.copy = True
-    args.no_year = False
-    args.daily = False
+    target_dir = os.path.join(temp_dir, "organized")
 
-    target_file = os.path.join(args.target, "2023", "11", "file1.txt")
+    target_file = os.path.join(target_dir, "2023", "11", "file1.txt")
     os.makedirs(os.path.dirname(target_file), exist_ok=True)
     shutil.copy2(sample_files[0], target_file)  # Create identical file
 
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)
     ):
-        failed_files = organize_files(args, sample_files)
+        _, failed_files = organize_files(sample_files, target_dir, copy=True)
 
     assert failed_files == []  # Should skip identical files without errors
 
 
 def test_organize_files_conflict_different(temp_dir, sample_files):
     """Test handling of duplicate but different files."""
-    args = mock.Mock()
-    args.target = os.path.join(temp_dir, "organized")
-    args.copy = True
-    args.no_year = False
-    args.daily = False
+    target_dir = os.path.join(temp_dir, "organized")
 
-    target_file = os.path.join(args.target, "2023", "11", "file1.txt")
+    target_file = os.path.join(target_dir, "2023", "11", "file1.txt")
     os.makedirs(os.path.dirname(target_file), exist_ok=True)
 
     with open(target_file, "w") as f:
@@ -116,27 +98,23 @@ def test_organize_files_conflict_different(temp_dir, sample_files):
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)
     ):
-        failed_files = organize_files(args, sample_files)
+        _, failed_files = organize_files(sample_files, target_dir, copy=True)
 
     assert failed_files == [sample_files[0]]  # Different file should cause failure
 
 
 def test_organize_files_daily(temp_dir, sample_files):
     """Test organizing files with daily structure."""
-    args = mock.Mock()
-    args.target = os.path.join(temp_dir, "organized")
-    args.copy = False
-    args.no_year = False
-    args.daily = True
+    target_dir = os.path.join(temp_dir, "organized")
 
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)
     ):
-        failed_files = organize_files(args, sample_files)
+        _, failed_files = organize_files(sample_files, target_dir, daily=True)
 
     # Ensure the files were moved into daily folders
-    expected_path1 = os.path.join(args.target, "2023", "11", "14", "file1.txt")
-    expected_path2 = os.path.join(args.target, "2023", "11", "14", "file2.txt")
+    expected_path1 = os.path.join(target_dir, "2023", "11", "14", "file1.txt")
+    expected_path2 = os.path.join(target_dir, "2023", "11", "14", "file2.txt")
 
     assert os.path.exists(expected_path1)
     assert os.path.exists(expected_path2)
@@ -145,20 +123,16 @@ def test_organize_files_daily(temp_dir, sample_files):
 
 def test_organize_files_no_year(temp_dir, sample_files):
     """Test organizing files without a year folder."""
-    args = mock.Mock()
-    args.target = os.path.join(temp_dir, "organized")
-    args.copy = False
-    args.no_year = True
-    args.daily = False
+    target_dir = os.path.join(temp_dir, "organized")
 
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)
     ):
-        failed_files = organize_files(args, sample_files)
+        _, failed_files = organize_files(sample_files, target_dir, no_year=True)
 
     # Ensure the files were moved into a structure without a year
-    expected_path1 = os.path.join(args.target, "2023-11", "file1.txt")
-    expected_path2 = os.path.join(args.target, "2023-11", "file2.txt")
+    expected_path1 = os.path.join(target_dir, "2023-11", "file1.txt")
+    expected_path2 = os.path.join(target_dir, "2023-11", "file2.txt")
 
     assert os.path.exists(expected_path1)
     assert os.path.exists(expected_path2)

@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "photo_organizer"
-version = "1.6.0"
+version = "1.7.0"
 description = "A script to organize photos by creation date into year/month/day folders."
 readme = "README.md"
 authors = [
     { name = "Supporterino", email = "lars@roth-kl.de" }
 ]
 license = { text = "MIT" }
-requires-python = ">=3.6"
-dependencies = ["tqdm"]  # Add dependencies here, e.g., "numpy"
+requires-python = ">=3.10"
+dependencies = ["tqdm", "exifread"]  # Add dependencies here, e.g., "numpy"
 
 [project.urls]
 Homepage = "https://github.com/Supporterino/photo-organizer"

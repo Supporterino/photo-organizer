@@ -6,7 +6,7 @@ from unittest.mock import patch
 from photo_organizer.main import (
     list_files,
     get_creation_date,
-    ensure_directory_exists,
+    _ensure_directory_exists,
     organize_files,
 )
 
@@ -141,7 +141,7 @@ def test_get_creation_date(setup_source_directory):
 def test_ensure_directory_exists():
     with tempfile.TemporaryDirectory() as temp_dir:
         new_dir = os.path.join(temp_dir, "newdir")
-        ensure_directory_exists(new_dir)
+        _ensure_directory_exists(new_dir)
         assert os.path.exists(new_dir)
 
 
@@ -153,16 +153,7 @@ def test_organize_files_copy(
     source_dir, file_paths = setup_source_directory
     target_dir = setup_target_directory
 
-    class Args:
-        def __init__(self):
-            self.target = target_dir
-            self.daily = False
-            self.no_year = False
-            self.copy = True
-            self.no_progress = False
-
-    args = Args()
-    organize_files(args, file_paths)
+    organize_files(file_paths, target_dir, copy=True)
 
     target_folder = os.path.join(target_dir, "2021", "01")
     assert os.path.exists(target_folder)
@@ -177,16 +168,7 @@ def test_organize_files_move(
     source_dir, file_paths = setup_source_directory
     target_dir = setup_target_directory
 
-    class Args:
-        def __init__(self):
-            self.target = target_dir
-            self.daily = False
-            self.no_year = False
-            self.copy = False
-            self.no_progress = False
-
-    args = Args()
-    organize_files(args, file_paths)
+    organize_files(file_paths, target_dir)
 
     target_folder = os.path.join(target_dir, "2021", "01")
     assert os.path.exists(target_folder)
@@ -201,16 +183,7 @@ def test_organize_files_no_year(
     source_dir, file_paths = setup_source_directory
     target_dir = setup_target_directory
 
-    class Args:
-        def __init__(self):
-            self.target = target_dir
-            self.daily = False
-            self.no_year = True
-            self.copy = False
-            self.no_progress = False
-
-    args = Args()
-    organize_files(args, file_paths)
+    organize_files(file_paths, target_dir, no_year=True)
 
     target_folder = os.path.join(target_dir, "2021-01")
     assert os.path.exists(target_folder)
@@ -225,16 +198,7 @@ def test_organize_files_daily(
     source_dir, file_paths = setup_source_directory
     target_dir = setup_target_directory
 
-    class Args:
-        def __init__(self):
-            self.target = target_dir
-            self.daily = True
-            self.no_year = False
-            self.copy = False
-            self.no_progress = False
-
-    args = Args()
-    organize_files(args, file_paths)
+    organize_files(file_paths, target_dir, daily=True)
 
     target_folder = os.path.join(target_dir, "2021", "01", "01")
     assert os.path.exists(target_folder)
@@ -249,16 +213,7 @@ def test_organize_files_no_year_daily(
     source_dir, file_paths = setup_source_directory
     target_dir = setup_target_directory
 
-    class Args:
-        def __init__(self):
-            self.target = target_dir
-            self.daily = True
-            self.no_year = True
-            self.copy = False
-            self.no_progress = False
-
-    args = Args()
-    organize_files(args, file_paths)
+    organize_files(file_paths, target_dir, daily=True, no_year=True)
 
     target_folder = os.path.join(target_dir, "2021-01", "01")
     assert os.path.exists(target_folder)

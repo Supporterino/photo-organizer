@@ -4,14 +4,14 @@ from setuptools import setup, find_packages
 
 setup(
     name="photo_organizer",
-    version="1.6.0",
+    version="1.7.0",
     packages=find_packages(),
     entry_points={
         "console_scripts": [
             "photo-organizer=photo_organizer.main:main",
         ],
     },
-    install_requires=["tqdm"],
+    install_requires=["tqdm", "exifread"],
     author="Supporterino",
     author_email="lars@roth-kl.de",
     description="A script to organize photos by creation date into year/month/day folders.",
@@ -23,5 +23,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.10",
 )

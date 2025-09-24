@@ -290,7 +290,6 @@ def organize_files(args, files):
 
     if args.dry_run:
         logging.info("Dry run mode enabled - no actual file operations will be performed")
-        return failed_files
 
     # Precompute directory structure for progress reporting
     directory_counts = {}
@@ -360,12 +359,13 @@ def organize_files(args, files):
             if not os.access(target_folder, os.W_OK):
                 raise PermissionError(f"Write permission denied for {target_folder}")
 
-            if args.copy:
-                # Use copy2 with permission preservation
-                shutil.copy2(file_path, target_path)
-            else:
-                # Check write permissions before moving
-                shutil.move(file_path, target_path)
+            if not args.dry_run:
+                if args.copy:
+                    # Use copy2 with permission preservation
+                    shutil.copy2(file_path, target_path)
+                else:
+                    # Check write permissions before moving
+                    shutil.move(file_path, target_path)
 
             # Update progress counts
             success_counts += 1

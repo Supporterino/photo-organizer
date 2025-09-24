@@ -11,7 +11,7 @@ setup(
             "photo-organizer=photo_organizer.main:main",
         ],
     },
-    install_requires=["tqdm"],
+    install_requires=["tqdm", "exifread"],
     author="Supporterino",
     author_email="lars@roth-kl.de",
     description="A script to organize photos by creation date into year/month/day folders.",

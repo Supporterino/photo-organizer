@@ -71,18 +71,61 @@ def list_files(
     return file_list
 
 
-def get_creation_date(file_path):
+def get_exif_creation_date(file_path):
     """
-    Get the creation date of a file and extract year, month, and day.
-
-    Parameters:
-    file_path (str): The path to the file.
+    Extract creation date from EXIF data if available.
 
     Returns:
-    tuple: A tuple containing the year, month, and day.
+    tuple: (year, month, day) if EXIF data exists and valid, None otherwise
     """
-    stat = os.stat(file_path)
+    try:
+        import exifread
+    except ImportError:
+        logging.warning("exifread library not installed. EXIF functionality disabled.")
+        return None
 
+    try:
+        with open(file_path, 'rb') as f:
+            tags = exifread.process_file(f)
+    except Exception as e:
+        logging.error(f"Error reading EXIF for {file_path}: {e}")
+        return None
+
+    # Get EXIF creation date (common tag)
+    exif_date = tags.get('Exif.Image.DateTime')
+    if exif_date:
+        try:
+            # Parse EXIF date string (format: '2023:09:15 14:30:22')
+            dt = datetime.datetime.strptime(exif_date, '%Y:%m:%d %H:%M:%S')
+            return (dt.year, dt.month, dt.day)
+        except (ValueError, TypeError):
+            logging.warning(f"Invalid EXIF date format: {exif_date}. Falling back to file system.")
+            return None
+
+    return None  # No valid EXIF date found
+
+
+def get_creation_date(file_path, use_exif=False):
+    """
+    Get creation date from either EXIF data (if enabled) or file system metadata.
+
+    Parameters:
+    file_path (str): Path to file
+    use_exif (bool): Whether to use EXIF data for creation date (default: False)
+
+    Returns:
+    tuple: (year, month, day) from EXIF or file system creation time
+    """
+    # If EXIF is requested, try EXIF first
+    if use_exif:
+        exif_date = get_exif_creation_date(file_path)
+        if exif_date:
+            return exif_date
+        else:
+            logging.debug(f"EXIF date not found for {file_path}. Falling back to file system.")
+
+    # Fallback to file system method (no recursion)
+    stat = os.stat(file_path)
     if os.name == "nt":  # Windows
         creation_time = os.path.getctime(file_path)
     elif hasattr(stat, "st_birthtime"):  # macOS
@@ -91,7 +134,6 @@ def get_creation_date(file_path):
         creation_time = stat.st_mtime
 
     creation_date = datetime.date.fromtimestamp(creation_time)
-
     logging.debug(f"File {file_path} creation date: {creation_date}")
     return creation_date.year, creation_date.month, creation_date.day
 
@@ -226,6 +268,12 @@ def parse_arguments():
         action="store_true",
         help="Perform a dry run (no actual file operations)",
     )
+    parser.add_argument(
+        "--exif",
+        action="store_true",
+        default=False,
+        help="Use EXIF data for creation date instead of file system creation time"
+    )
 
     return parser.parse_args()
 
@@ -247,7 +295,11 @@ def organize_files(args, files):
     # Precompute directory structure for progress reporting
     directory_counts = {}
     for file_path in files:
-        year, month, day = get_creation_date(file_path)
+        sanitized_path = sanitize_path(file_path)
+        if not sanitized_path:
+            logging.warning(f"Skipped invalid path: {file_path}")
+            continue
+        year, month, day = get_creation_date(sanitized_path, use_exif=args.exif)
         folder_path = os.path.join(args.target, f"{year}", f"{month:02d}", f"{day:02d}")
         directory_counts[folder_path] = directory_counts.get(folder_path, 0) + 1
 

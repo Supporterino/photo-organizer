@@ -6,18 +6,19 @@ import re
 import shutil
 import datetime
 import logging
-import filecmp
 import glob
 from tqdm import tqdm
 import fnmatch
+import hashlib
+import os.path
 
 
 def list_files(
-    source,
-    recursive=False,
-    file_endings=None,
-    exclude_pattern=None,
-    exclude_is_regex=False,
+        source,
+        recursive=False,
+        file_endings=None,
+        exclude_pattern=None,
+        exclude_is_regex=False,
 ):
     """
     List all files in the source directory, optionally filtering by file extension
@@ -60,8 +61,8 @@ def list_files(
         file
         for file in all_files
         if os.path.isfile(file)
-        and (not file_endings or file.lower().endswith(file_endings))
-        and (not pattern or not pattern.search(os.path.basename(file)))
+           and (not file_endings or file.lower().endswith(file_endings))
+           and (not pattern or not pattern.search(os.path.basename(file)))
     ]
 
     logging.debug(
@@ -129,6 +130,34 @@ def configure_logging(verbose):
     )
 
 
+def sanitize_path(path: str) -> str:
+    """Sanitize path to prevent path traversal attacks."""
+    sanitized = os.path.normpath(path)
+    # Check for dangerous path components
+    if re.search(r'(\.\./|^\.\.\/|^\.\.)', sanitized):
+        raise ValueError("Path contains invalid traversal components")
+    return sanitized
+
+
+def get_file_hash(file_path: str, max_size: int = 100 * 1024 * 1024) -> str:
+    """Get MD5 hash of file (for quick duplicate checks)."""
+    try:
+        # Skip large files (100MB+) to avoid excessive I/O
+        if os.path.getsize(file_path) > max_size:
+            return "LARGE_FILE"
+        with open(file_path, 'rb') as f:
+            chunk = f.read(4096)
+            if not chunk:
+                return None
+            hash_obj = hashlib.md5()
+            while chunk:
+                hash_obj.update(chunk)
+                chunk = f.read(4096)
+        return hash_obj.hexdigest()
+    except Exception as e:
+        logging.error(f"Error hashing {file_path}: {e}")
+        return None
+
 def parse_arguments():
     """
     Parse command-line arguments for the photo organizer.
@@ -192,9 +221,13 @@ def parse_arguments():
         action="store_true",
         help="Delete source file if an identical file already exists in the target directory",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Perform a dry run (no actual file operations)",
+    )
 
     return parser.parse_args()
-
 
 def organize_files(args, files):
     """
@@ -205,16 +238,35 @@ def organize_files(args, files):
     files (list): List of file paths to organize.
     """
     failed_files = []  # Track files that couldn't be processed
+    success_counts = 0
 
+    if args.dry_run:
+        logging.info("Dry run mode enabled - no actual file operations will be performed")
+        return failed_files
+
+    # Precompute directory structure for progress reporting
+    directory_counts = {}
+    for file_path in files:
+        year, month, day = get_creation_date(file_path)
+        folder_path = os.path.join(args.target, f"{year}", f"{month:02d}", f"{day:02d}")
+        directory_counts[folder_path] = directory_counts.get(folder_path, 0) + 1
+
+    # Process files with improved duplicate checking
     if args.no_progress:
         file_iter = files
     else:
-        file_iter = tqdm(files, unit="files")
+        file_iter = tqdm(files, unit="files", desc="Organizing")
 
     for file_path in file_iter:
-        year, month, day = get_creation_date(file_path)
+        # Sanitize path to prevent traversal attacks
+        sanitized_path = sanitize_path(file_path)
+        if not sanitized_path:
+            logging.warning(f"Skipped invalid path: {file_path}")
+            continue
 
-        # Construct target folder structure
+        year, month, day = get_creation_date(sanitized_path)
+
+        # Build target structure (with sanitization)
         folder_parts = [args.target]
         if args.no_year:
             folder_parts.append(f"{str(year)}-{month:02d}")
@@ -223,49 +275,66 @@ def organize_files(args, files):
             folder_parts.append(f"{month:02d}")
         if args.daily:
             folder_parts.append(f"{day:02d}")
-
         target_folder = os.path.join(*folder_parts)
         ensure_directory_exists(target_folder)
-        target_path = os.path.join(target_folder, os.path.basename(file_path))
+        target_path = os.path.join(target_folder, os.path.basename(sanitized_path))
 
-        # Check for duplicate file
+        # Check for duplicate (using hash first)
         if os.path.exists(target_path):
-            if filecmp.cmp(file_path, target_path, shallow=False):
+            # Check hash first (for large files)
+            source_hash = get_file_hash(file_path)
+            target_hash = get_file_hash(target_path)
+
+            if source_hash == target_hash:
+                # Exact match - handle as duplicate
                 if args.delete_duplicates:
                     try:
                         os.remove(file_path)
-                        logging.info(
-                            f"Deleted duplicate '{file_path}' (already exists at '{target_path}')"
-                        )
+                        logging.info(f"Deleted duplicate '{file_path}' (matches existing)")
                     except Exception as e:
                         logging.error(f"Error deleting duplicate '{file_path}': {e}")
                         failed_files.append(file_path)
                 else:
-                    logging.warning(
-                        f"Skipping '{file_path}': Identical file already exists at '{target_path}'"
-                    )
+                    logging.info(f"Skipping '{file_path}': Identical file already exists")
                 continue
             else:
-                logging.error(
-                    f"File conflict: '{target_path}' already exists but is different."
-                )
+                # Different content but same path - error
+                logging.error(f"File conflict: '{target_path}' already exists but is different")
                 failed_files.append(file_path)
                 continue
 
-        # Move or copy file
+        # Move or copy (with permission checks)
         try:
+            if not os.access(target_folder, os.W_OK):
+                raise PermissionError(f"Write permission denied for {target_folder}")
+
             if args.copy:
+                # Use copy2 with permission preservation
                 shutil.copy2(file_path, target_path)
-                logging.info(f"Copied '{file_path}' → '{target_path}'")
             else:
+                # Check write permissions before moving
                 shutil.move(file_path, target_path)
-                logging.info(f"Moved '{file_path}' → '{target_path}'")
+
+            # Update progress counts
+            success_counts += 1
+            logging.info(f"Processed {file_path} → {target_path}")
         except Exception as e:
-            logging.error(f"Error moving/copying '{file_path}' → '{target_path}': {e}")
+            logging.error(f"Error processing {file_path}: {e}")
             failed_files.append(file_path)
+        finally:
+            # Update directory counts for progress reporting
+            if args.no_progress:
+                continue
+            if os.path.exists(target_path):
+                directory_counts[target_folder] = directory_counts.get(target_folder, 0) + 1
 
-    return failed_files  # Return failed files for better handling
+    # Show progress summary
+    if file_iter and not args.no_progress:
+        file_iter.close()
+    logging.info(
+        f"Organized {success_counts} files")
 
+    return failed_files
 
 def main():
     """

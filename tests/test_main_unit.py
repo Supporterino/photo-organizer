@@ -17,6 +17,7 @@ def mock_args():
         no_year=False,
         daily=False,
         verbose=0,
+        dry_run=False,
     )
 
 

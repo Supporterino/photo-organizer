@@ -27,6 +27,7 @@ def mock_args(base, **overrides):
         exclude = None
         verbose = 0
         exclude_regex = False
+        dry_run = False
 
     for key, value in overrides.items():
         setattr(Args, key, value)

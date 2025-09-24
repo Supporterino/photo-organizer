@@ -38,6 +38,7 @@ def test_organize_files_move(temp_dir, sample_files):
     args.copy = False
     args.no_year = False
     args.daily = False
+    args.dry_run = False
 
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)
@@ -62,6 +63,7 @@ def test_organize_files_copy(temp_dir, sample_files):
     args.copy = True
     args.no_year = False
     args.daily = False
+    args.dry_run = False
 
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)
@@ -86,6 +88,7 @@ def test_organize_files_conflict_identical(temp_dir, sample_files):
     args.copy = True
     args.no_year = False
     args.daily = False
+    args.dry_run = False
 
     target_file = os.path.join(args.target, "2023", "11", "file1.txt")
     os.makedirs(os.path.dirname(target_file), exist_ok=True)
@@ -106,6 +109,7 @@ def test_organize_files_conflict_different(temp_dir, sample_files):
     args.copy = True
     args.no_year = False
     args.daily = False
+    args.dry_run = False
 
     target_file = os.path.join(args.target, "2023", "11", "file1.txt")
     os.makedirs(os.path.dirname(target_file), exist_ok=True)
@@ -128,6 +132,7 @@ def test_organize_files_daily(temp_dir, sample_files):
     args.copy = False
     args.no_year = False
     args.daily = True
+    args.dry_run = False
 
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)
@@ -150,6 +155,7 @@ def test_organize_files_no_year(temp_dir, sample_files):
     args.copy = False
     args.no_year = True
     args.daily = False
+    args.dry_run = False
 
     with mock.patch(
         "photo_organizer.main.get_creation_date", return_value=(2023, 11, 14)

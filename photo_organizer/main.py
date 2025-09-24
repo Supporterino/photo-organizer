@@ -14,25 +14,34 @@ import os.path
 
 
 def list_files(
-        source,
-        recursive=False,
-        file_endings=None,
-        exclude_pattern=None,
-        exclude_is_regex=False,
-):
+    source: str,
+    recursive: bool = False,
+    file_endings: list | None = None,
+    exclude_pattern: str | None = None,
+    exclude_is_regex: bool = False,
+) -> list[str]:
     """
-    List all files in the source directory, optionally filtering by file extension
-    and excluding files using glob or regex patterns.
+    Return a list of file paths that satisfy the same criteria used by
+    the CLI.  This is deliberately a *pure* function – no side effects,
+    no I/O other than the file‑system scan.
 
-    Parameters:
-    source (str): The source directory path.
-    recursive (bool): If True, list files recursively. Default is False.
-    file_endings (list): List of file extensions to include (e.g., ['.jpg', '.png']). Default is None.
-    exclude_pattern (str): A glob or regex pattern to exclude matching files. Default is None.
-    exclude_is_regex (bool): Whether to treat the exclude_pattern as a regular expression.
+    Parameters
+    ----------
+    source : str
+        Root directory to search.
+    recursive : bool, default False
+        Whether sub‑directories should be traversed.
+    file_endings : list[str] | None, default None
+        List of extensions to include (e.g. ['.jpg', '.png']).
+    exclude_pattern : str | None, default None
+        Glob or regex pattern for files that should be omitted.
+    exclude_is_regex : bool, default False
+        Treat ``exclude_pattern`` as a regular expression if True.
 
-    Returns:
-    list: A list of file paths that meet the criteria.
+    Returns
+    -------
+    list[str]
+        Absolute file paths that match the criteria.
     """
     pattern = None
     if exclude_pattern:
@@ -138,7 +147,7 @@ def get_creation_date(file_path, use_exif=False):
     return creation_date.year, creation_date.month, creation_date.day
 
 
-def ensure_directory_exists(folder_path):
+def _ensure_directory_exists(folder_path):
     """
     Ensure the given folder path exists. If not, create all missing directories.
 
@@ -149,16 +158,15 @@ def ensure_directory_exists(folder_path):
     logging.debug(f"Ensured directory exists: {folder_path}")
 
 
-def configure_logging(verbose):
+def _configure_logging(verbose):
     """
     Configure logging settings.
 
     Parameters:
     verbose (int): Increase verbosity with count (max of 2).
     """
-    if verbose == 0:
-        level = logging.WARNING  # default
-    elif verbose == 1:
+    level = logging.WARNING  # default
+    if verbose == 1:
         level = logging.INFO
     elif verbose == 2:
         level = logging.DEBUG
@@ -172,7 +180,7 @@ def configure_logging(verbose):
     )
 
 
-def sanitize_path(path: str) -> str:
+def _sanitize_path(path: str) -> str:
     """Sanitize path to prevent path traversal attacks."""
     sanitized = os.path.normpath(path)
     # Check for dangerous path components
@@ -181,7 +189,7 @@ def sanitize_path(path: str) -> str:
     return sanitized
 
 
-def get_file_hash(file_path: str, max_size: int = 100 * 1024 * 1024) -> str:
+def _get_file_hash(file_path: str, max_size: int = 100 * 1024 * 1024) -> str:
     """Get MD5 hash of file (for quick duplicate checks)."""
     try:
         # Skip large files (100MB+) to avoid excessive I/O
@@ -200,7 +208,7 @@ def get_file_hash(file_path: str, max_size: int = 100 * 1024 * 1024) -> str:
         logging.error(f"Error hashing {file_path}: {e}")
         return None
 
-def parse_arguments():
+def _parse_arguments():
     """
     Parse command-line arguments for the photo organizer.
 
@@ -277,40 +285,76 @@ def parse_arguments():
 
     return parser.parse_args()
 
-def organize_files(args, files):
+def organize_files(
+    files: list[str],
+    target: str,
+    *,
+    no_progress: bool = False,
+    daily: bool = False,
+    copy: bool = False,
+    no_year: bool = False,
+    delete_duplicates: bool = False,
+    dry_run: bool = False,
+    exif: bool = False,
+) -> tuple[int, list[str]]:
     """
-    Organize files by moving or copying them to the target directory.
+    Organise files from *source* into *target* according to the
+    provided options.  This function is a drop‑in replacement for the
+    CLI logic – it performs **no argument parsing** and returns a
+    lightweight result instead of printing to stdout.
 
-    Parameters:
-    args (Namespace): Parsed command line arguments.
-    files (list): List of file paths to organize.
+    Parameters
+    ----------
+    files: list[str]
+        Files to process.
+    target : str
+        Directories for output.
+    no_progress : bool
+        Disable progress bar for usage in a fully automated environment.
+    daily : bool
+        Create a day folder under month (i.e. YYYY/MM/DD).
+    copy : bool
+        Copy instead of moving files.
+    no_year : bool
+        Omit the year level (YYYY‑MM) instead of YYYY/MM.
+    delete_duplicates : bool
+        Delete source file when an identical target exists.
+    dry_run : bool
+        Skip all filesystem writes – useful for testing.
+    exif : bool
+        Prefer EXIF dates over file system timestamps.
+
+    Returns
+    -------
+    tuple[int, list[str]]
+        ``(success_count, failed_files)``
     """
     failed_files = []  # Track files that couldn't be processed
-    success_counts = 0
+    success_count = 0
 
-    if args.dry_run:
+    if dry_run:
         logging.info("Dry run mode enabled - no actual file operations will be performed")
 
     # Precompute directory structure for progress reporting
     directory_counts = {}
     for file_path in files:
-        sanitized_path = sanitize_path(file_path)
+        sanitized_path = _sanitize_path(file_path)
         if not sanitized_path:
             logging.warning(f"Skipped invalid path: {file_path}")
             continue
-        year, month, day = get_creation_date(sanitized_path, use_exif=args.exif)
-        folder_path = os.path.join(args.target, f"{year}", f"{month:02d}", f"{day:02d}")
+        year, month, day = get_creation_date(sanitized_path, use_exif=exif)
+        folder_path = os.path.join(target, f"{year}", f"{month:02d}", f"{day:02d}")
         directory_counts[folder_path] = directory_counts.get(folder_path, 0) + 1
 
     # Process files with improved duplicate checking
-    if args.no_progress:
+    if no_progress:
         file_iter = files
     else:
         file_iter = tqdm(files, unit="files", desc="Organizing")
 
     for file_path in file_iter:
         # Sanitize path to prevent traversal attacks
-        sanitized_path = sanitize_path(file_path)
+        sanitized_path = _sanitize_path(file_path)
         if not sanitized_path:
             logging.warning(f"Skipped invalid path: {file_path}")
             continue
@@ -318,27 +362,27 @@ def organize_files(args, files):
         year, month, day = get_creation_date(sanitized_path)
 
         # Build target structure (with sanitization)
-        folder_parts = [args.target]
-        if args.no_year:
+        folder_parts = [target]
+        if no_year:
             folder_parts.append(f"{str(year)}-{month:02d}")
         else:
             folder_parts.append(str(year))
             folder_parts.append(f"{month:02d}")
-        if args.daily:
+        if daily:
             folder_parts.append(f"{day:02d}")
         target_folder = os.path.join(*folder_parts)
-        ensure_directory_exists(target_folder)
+        _ensure_directory_exists(target_folder)
         target_path = os.path.join(target_folder, os.path.basename(sanitized_path))
 
         # Check for duplicate (using hash first)
         if os.path.exists(target_path):
             # Check hash first (for large files)
-            source_hash = get_file_hash(file_path)
-            target_hash = get_file_hash(target_path)
+            source_hash = _get_file_hash(file_path)
+            target_hash = _get_file_hash(target_path)
 
             if source_hash == target_hash:
                 # Exact match - handle as duplicate
-                if args.delete_duplicates:
+                if delete_duplicates:
                     try:
                         os.remove(file_path)
                         logging.info(f"Deleted duplicate '{file_path}' (matches existing)")
@@ -359,8 +403,8 @@ def organize_files(args, files):
             if not os.access(target_folder, os.W_OK):
                 raise PermissionError(f"Write permission denied for {target_folder}")
 
-            if not args.dry_run:
-                if args.copy:
+            if not dry_run:
+                if copy:
                     # Use copy2 with permission preservation
                     shutil.copy2(file_path, target_path)
                 else:
@@ -368,43 +412,37 @@ def organize_files(args, files):
                     shutil.move(file_path, target_path)
 
             # Update progress counts
-            success_counts += 1
+            success_count += 1
             logging.info(f"Processed {file_path} → {target_path}")
         except Exception as e:
             logging.error(f"Error processing {file_path}: {e}")
             failed_files.append(file_path)
         finally:
             # Update directory counts for progress reporting
-            if args.no_progress:
+            if no_progress:
                 continue
             if os.path.exists(target_path):
                 directory_counts[target_folder] = directory_counts.get(target_folder, 0) + 1
 
     # Show progress summary
-    if file_iter and not args.no_progress:
+    if file_iter and not no_progress:
         file_iter.close()
     logging.info(
-        f"Organized {success_counts} files")
+        f"Organized {success_count} files")
 
-    return failed_files
+    return success_count, failed_files
 
-def main():
-    """
-    Main entry point for the photo organizer script.
-    Parses arguments, configures logging, and processes files.
-    """
-    args = parse_arguments()
-    configure_logging(args.verbose)
-
-    logging.info("Photo Organizer started")
+def main() -> int:
+    """Entrypoint used by the console‑script."""
+    args = _parse_arguments()
+    _configure_logging(args.verbose)
 
     if not os.path.isdir(args.source):
         logging.error(f"Source directory does not exist: {args.source}")
-        return 1  # Exit with error
+        return 1
 
-    ensure_directory_exists(args.target)
+    _ensure_directory_exists(args.target)
 
-    logging.info("Collecting files...")
     files = list_files(
         source=args.source,
         recursive=args.recursive,
@@ -414,15 +452,26 @@ def main():
     )
 
     if not files:
-        logging.warning("No matching files found to organize.")
-        return 0  # Exit normally, nothing to do
+        logging.warning("No matching files found.")
+        return 0
 
-    logging.info(f"{len(files)} files found. Starting organization...")
-    failed = organize_files(args, files)
+    success, failed = organize_files(
+        files,
+        args.target,
+        no_progress=args.no_progress,
+        daily=args.daily,
+        copy=args.copy,
+        no_year=args.no_year,
+        delete_duplicates=args.delete_duplicates,
+        dry_run=args.dry_run,
+        exif=args.exif,
+    )
 
     if failed:
-        logging.warning(f"Organization completed with {len(failed)} failed file(s).")
-        return 1  # Partial failure
-    else:
-        logging.info("All files organized successfully.")
-        return 0
+        logging.warning(f"{len(failed)} files could not be processed.")
+        return 1
+    logging.info("All files organized successfully.")
+    return 0
+
+if __name__ == "__main__":
+    exit(main())

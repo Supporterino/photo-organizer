@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="photo_organizer",
-    version="1.6.0",
+    version="1.7.0",
     packages=find_packages(),
     entry_points={
         "console_scripts": [
@@ -23,5 +23,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.10",
 )

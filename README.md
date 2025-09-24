@@ -59,6 +59,8 @@ Options
 * `--no-year`: Do not place month folders inside a year folder; place them top-level with the name format YEAR-MONTH
 * `--no-progress`:  Disable progress bar for usage in a fully automated environment
 * `--delete-duplicates`: Delete source file if an identical file already exists in the target directory
+* `--dry-run`: Only logs the expected actions and errors but does not modify anything
+* `--exif`: Try to parse the creation date from pictures EXIF data and falls back to creation date
 
 ### Examples
 

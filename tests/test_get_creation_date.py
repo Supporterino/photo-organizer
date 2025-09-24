@@ -4,7 +4,7 @@ import datetime
 from unittest import mock
 from photo_organizer.main import (
     get_creation_date,
-)  # Replace `your_module` with your actual module name
+)
 
 
 @pytest.fixture

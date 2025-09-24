@@ -1,4 +1,2 @@
 exifread
-# requirements.txt
-
 tqdm

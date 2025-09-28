@@ -101,7 +101,7 @@ def get_exif_creation_date(file_path):
         return None
 
     # Get EXIF creation date (common tag)
-    exif_date = tags.get('Exif.Image.DateTime')
+    exif_date = str(tags.get('Image DateTime'))
     if exif_date:
         try:
             # Parse EXIF date string (format: '2023:09:15 14:30:22')
@@ -359,7 +359,7 @@ def organize_files(
             logging.warning(f"Skipped invalid path: {file_path}")
             continue
 
-        year, month, day = get_creation_date(sanitized_path)
+        year, month, day = get_creation_date(sanitized_path, use_exif=exif)
 
         # Build target structure (with sanitization)
         folder_parts = [target]

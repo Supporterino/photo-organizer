@@ -7,11 +7,10 @@ import shutil
 import datetime
 import logging
 import glob
-from tqdm import tqdm
 import fnmatch
 import hashlib
 import os.path
-
+from tqdm import tqdm
 
 def list_files(
     source: str,
@@ -402,10 +401,10 @@ def organize_files(
 
         # Move or copy (with permission checks)
         try:
-            if not os.access(target_folder, os.W_OK):
-                raise PermissionError(f"Write permission denied for {target_folder}")
-
             if not dry_run:
+                if not os.access(target_folder, os.W_OK):
+                    raise PermissionError(f"Write permission denied for {target_folder}")
+
                 if copy:
                     # Use copy2 with permission preservation
                     shutil.copy2(file_path, target_path)

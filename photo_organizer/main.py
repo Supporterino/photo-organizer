@@ -371,7 +371,8 @@ def organize_files(
         if daily:
             folder_parts.append(f"{day:02d}")
         target_folder = os.path.join(*folder_parts)
-        _ensure_directory_exists(target_folder)
+        if not dry_run:
+            _ensure_directory_exists(target_folder)
         target_path = os.path.join(target_folder, os.path.basename(sanitized_path))
 
         # Check for duplicate (using hash first)
@@ -384,7 +385,8 @@ def organize_files(
                 # Exact match - handle as duplicate
                 if delete_duplicates:
                     try:
-                        os.remove(file_path)
+                        if not dry_run:
+                            os.remove(file_path)
                         logging.info(f"Deleted duplicate '{file_path}' (matches existing)")
                     except Exception as e:
                         logging.error(f"Error deleting duplicate '{file_path}': {e}")

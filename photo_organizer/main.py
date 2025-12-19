@@ -420,9 +420,7 @@ def organize_files(
             failed_files.append(file_path)
         finally:
             # Update directory counts for progress reporting
-            if no_progress:
-                continue
-            if os.path.exists(target_path):
+            if not no_progress and os.path.exists(target_path):
                 directory_counts[target_folder] = directory_counts.get(target_folder, 0) + 1
 
     # Show progress summary

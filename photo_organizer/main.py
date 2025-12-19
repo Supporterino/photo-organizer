@@ -107,7 +107,7 @@ def get_exif_creation_date(file_path):
             dt = datetime.datetime.strptime(exif_date, '%Y:%m:%d %H:%M:%S')
             return (dt.year, dt.month, dt.day)
         except (ValueError, TypeError):
-            logging.warning(f"Invalid EXIF date format: {exif_date}. Falling back to file system.")
+            logging.warning(f"Invalid EXIF date format: {exif_date} for {file_path}. Falling back to file system.")
             return None
 
     return None  # No valid EXIF date found

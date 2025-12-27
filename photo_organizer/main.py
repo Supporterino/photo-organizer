@@ -1,24 +1,20 @@
 # photo_organizer/main.py
 
 import argparse
+import datetime
+import fnmatch
+import glob
+import hashlib
+import logging
 import os
 import re
 import shutil
-import datetime
-import logging
-import glob
-import fnmatch
-import hashlib
-import os.path
+
 from tqdm import tqdm
 
-def list_files(
-    source: str,
-    recursive: bool = False,
-    file_endings: list | None = None,
-    exclude_pattern: str | None = None,
-    exclude_is_regex: bool = False,
-) -> list[str]:
+
+def list_files(source: str, recursive: bool = False, file_endings: list | None = None,
+        exclude_pattern: str | None = None, exclude_is_regex: bool = False, ) -> list[str]:
     """
     Return a list of file paths that satisfy the same criteria used by
     the CLI.  This is deliberately a *pure* function – no side effects,
@@ -45,16 +41,10 @@ def list_files(
     pattern = None
     if exclude_pattern:
         try:
-            pattern_str = (
-                exclude_pattern
-                if exclude_is_regex
-                else fnmatch.translate(exclude_pattern)
-            )
+            pattern_str = (exclude_pattern if exclude_is_regex else fnmatch.translate(exclude_pattern))
             pattern = re.compile(pattern_str)
-            logging.debug(
-                f"Using {'regex' if exclude_is_regex else 'glob'} exclude pattern: '{exclude_pattern}' "
-                f"-> compiled regex: '{pattern.pattern}'"
-            )
+            logging.debug(f"Using {'regex' if exclude_is_regex else 'glob'} exclude pattern: "
+                          f"'{exclude_pattern}' -> compiled regex: '{pattern.pattern}'")
         except re.error as e:
             logging.error(f"Invalid exclude pattern '{exclude_pattern}': {e}")
             return []
@@ -65,17 +55,11 @@ def list_files(
     search_pattern = os.path.join(source, "**" if recursive else "*")
     all_files = glob.glob(search_pattern, recursive=recursive)
 
-    file_list = [
-        file
-        for file in all_files
-        if os.path.isfile(file)
-           and (not file_endings or file.lower().endswith(file_endings))
-           and (not pattern or not pattern.search(os.path.basename(file)))
-    ]
+    file_list = [file for file in all_files if
+        os.path.isfile(file) and (not file_endings or file.lower().endswith(file_endings)) and (
+                    not pattern or not pattern.search(os.path.basename(file)))]
 
-    logging.debug(
-        f"Listed {len(file_list)} files from {source} (recursive={recursive})"
-    )
+    logging.debug(f"Listed {len(file_list)} files from {source} (recursive={recursive})")
     return file_list
 
 
@@ -173,17 +157,14 @@ def _configure_logging(verbose):
         level = logging.DEBUG
         logging.warning("Verbosity set >2 has no effect.")
 
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-    )
+    logging.basicConfig(level=level, format="%(asctime)s - %(levelname)s - %(message)s", )
 
 
 def _sanitize_path(path: str) -> str:
     """Sanitize path to prevent path traversal attacks."""
     sanitized = os.path.normpath(path)
     # Check for dangerous path components
-    if re.search(r'(\.\./|^\.\.\/|^\.\.)', sanitized):
+    if re.search(r'(\.\./|^\.\./|^\.\.)', sanitized):
         raise ValueError("Path contains invalid traversal components")
     return sanitized
 
@@ -207,95 +188,45 @@ def _get_file_hash(file_path: str, max_size: int = 100 * 1024 * 1024) -> str:
         logging.error(f"Error hashing {file_path}: {e}")
         return None
 
+
 def _parse_arguments():
     """
     Parse command-line arguments for the photo organizer.
 
     Returns:
-    argparse.Namespace: Parsed command-line arguments.
+    argparse.Namespace: Parsed command‑line arguments.
     """
-    parser = argparse.ArgumentParser(
-        description="Sort photos from source to target directory."
-    )
+    parser = argparse.ArgumentParser(description="Sort photos from source to target directory.")
     parser.add_argument("source", type=str, help="The source directory")
     parser.add_argument("target", type=str, help="The target directory")
-    parser.add_argument(
-        "-r", "--recursive", action="store_true", help="Sort photos recursively"
-    )
-    parser.add_argument(
-        "-d",
-        "--daily",
-        action="store_true",
-        default=False,
-        help="Folder structure with daily folders",
-    )
-    parser.add_argument(
-        "-e",
-        "--endings",
-        type=str,
-        nargs="*",
-        help="File endings/extensions to copy (e.g., .jpg .png)",
-    )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="count",
-        default=0,
-        help="Increase verbosity level (use -v for verbose, -vv for more verbose).",
-    )
-    parser.add_argument(
-        "-c", "--copy", action="store_true", help="Copy files instead of moving them"
-    )
-    parser.add_argument(
-        "--no-year",
-        action="store_true",
-        help="Do not place month folders inside a year folder",
-    )
-    parser.add_argument(
-        "--exclude",
-        help="Glob or regex pattern to exclude files. Defaults to glob unless --exclude-regex is set.",
-    )
-    parser.add_argument(
-        "--exclude-regex",
-        action="store_true",
-        help="Interpret the --exclude pattern as a regular expression.",
-    )
-    parser.add_argument(
-        "--no-progress",
-        action="store_true",
-        help="Disable progress bar for usage in a fully automated environment.",
-    )
-    parser.add_argument(
-        "--delete-duplicates",
-        action="store_true",
-        help="Delete source file if an identical file already exists in the target directory",
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Perform a dry run (no actual file operations)",
-    )
-    parser.add_argument(
-        "--exif",
-        action="store_true",
-        default=False,
-        help="Use EXIF data for creation date instead of file system creation time"
-    )
+    parser.add_argument("-r", "--recursive", action="store_true", help="Sort photos recursively")
+    parser.add_argument("-d", "--daily", action="store_true", default=False,
+        help="Folder structure with daily folders", )
+    parser.add_argument("-e", "--endings", type=str, nargs="*",
+        help="File endings/extensions to copy (e.g., .jpg .png)", )
+    parser.add_argument("-v", "--verbose", action="count", default=0,
+        help="Increase verbosity level (use -v for verbose, -vv for more verbose).", )
+    parser.add_argument("-c", "--copy", action="store_true", help="Copy files to target directory")
+    parser.add_argument("-m", "--move", action="store_true", help="Move files to target directory")
+    parser.add_argument("--no-year", action="store_true", help="Do not place month folders inside a year folder", )
+    parser.add_argument("--exclude",
+        help="Glob or regex pattern to exclude files. Defaults to glob unless --exclude-regex is set.", )
+    parser.add_argument("--exclude-regex", action="store_true",
+        help="Interpret the --exclude pattern as a regular expression.", )
+    parser.add_argument("--no-progress", action="store_true",
+        help="Disable progress bar for usage in a fully automated environment.", )
+    parser.add_argument("--delete-duplicates", action="store_true",
+        help="Delete source file if an identical file already exists in the target directory", )
+    parser.add_argument("--dry-run", action="store_true", help="Perform a dry run (no actual file operations)", )
+    parser.add_argument("--exif", action="store_true", default=False,
+        help="Use EXIF data for creation date instead of file system creation time")
 
     return parser.parse_args()
 
-def organize_files(
-    files: list[str],
-    target: str,
-    *,
-    no_progress: bool = False,
-    daily: bool = False,
-    copy: bool = False,
-    no_year: bool = False,
-    delete_duplicates: bool = False,
-    dry_run: bool = False,
-    exif: bool = False,
-) -> tuple[int, list[str]]:
+
+def organize_files(files: list[str], target: str, *, no_progress: bool = False, daily: bool = False, copy: bool = False,
+        no_year: bool = False, delete_duplicates: bool = False, dry_run: bool = False, exif: bool = False, ) -> tuple[
+    int, list[str]]:
     """
     Organise files from *source* into *target* according to the
     provided options.  This function is a drop‑in replacement for the
@@ -426,10 +357,10 @@ def organize_files(
     # Show progress summary
     if file_iter and not no_progress:
         file_iter.close()
-    logging.info(
-        f"Organized {success_count} files")
+    logging.info(f"Organized {success_count} files")
 
     return success_count, failed_files
+
 
 def main() -> int:
     """Entrypoint used by the console‑script."""
@@ -442,35 +373,27 @@ def main() -> int:
 
     _ensure_directory_exists(args.target)
 
-    files = list_files(
-        source=args.source,
-        recursive=args.recursive,
-        file_endings=args.endings,
-        exclude_pattern=args.exclude,
-        exclude_is_regex=args.exclude_regex,
-    )
+    files = list_files(source=args.source, recursive=args.recursive, file_endings=args.endings,
+        exclude_pattern=args.exclude, exclude_is_regex=args.exclude_regex, )
 
     if not files:
         logging.warning("No matching files found.")
         return 0
 
-    success, failed = organize_files(
-        files,
-        args.target,
-        no_progress=args.no_progress,
-        daily=args.daily,
-        copy=args.copy,
-        no_year=args.no_year,
-        delete_duplicates=args.delete_duplicates,
-        dry_run=args.dry_run,
-        exif=args.exif,
-    )
+    # Enforce explicit copy/move selection
+    if not args.copy and not args.move:
+        logging.warning("You must specify either --copy or --move.")
+        return 1
+
+    success, failed = organize_files(files, args.target, no_progress=args.no_progress, daily=args.daily, copy=args.copy,
+        no_year=args.no_year, delete_duplicates=args.delete_duplicates, dry_run=args.dry_run, exif=args.exif, )
 
     if failed:
         logging.warning(f"{len(failed)} files could not be processed.")
         return 1
     logging.info("All files organized successfully.")
     return 0
+
 
 if __name__ == "__main__":
     exit(main())

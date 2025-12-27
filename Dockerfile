@@ -1,5 +1,5 @@
 # builder layer
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /app
 COPY . /app
@@ -8,7 +8,7 @@ RUN pip install build
 RUN python -m build
 
 # actual image
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 LABEL org.opencontainers.image.source=https://github.com/Supporterino/photo-organizer
 
